@@ -1,0 +1,794 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Typing Craft</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --grass:#5d9e3f;--dirt:#8B5E3C;--stone:#7a7a7a;
+  --diamond:#4dd9e0;--gold:#f5c542;
+  --wood:#2d2416;--sky:#1a1a2e;
+}
+body{font-family:"Press Start 2P",monospace;background:var(--sky);color:#e0e0e0;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow-x:hidden;position:relative;}
+.pixel{position:fixed;width:8px;height:8px;opacity:.18;animation:floatUp linear infinite;pointer-events:none;}
+@keyframes floatUp{0%{transform:translateY(110vh) rotate(0deg);opacity:.18}100%{transform:translateY(-10vh) rotate(360deg);opacity:0}}
+#app{width:840px;max-width:97vw;text-align:center;position:relative;z-index:1}
+.screen{display:none}.screen.active{display:block}
+.mc-btn{font-family:"Press Start 2P",monospace;font-size:.7rem;padding:.7rem 1.6rem;background:#7a7a7a;color:#fff;text-shadow:1px 1px #000;cursor:pointer;border-top:3px solid #aaa;border-left:3px solid #aaa;border-bottom:3px solid #333;border-right:3px solid #333;letter-spacing:.04em;margin:.3rem;transition:background .1s;}
+.mc-btn:hover{background:#909090}
+.mc-btn:active{border-top-color:#333;border-left-color:#333;border-bottom-color:#aaa;border-right-color:#aaa;transform:translateY(1px)}
+.mc-btn.green{background:#5d9e3f;border-top-color:#7bc45a;border-left-color:#7bc45a;border-bottom-color:#2d6e1a;border-right-color:#2d6e1a}
+.mc-btn.green:hover{background:#6eb84a}
+.mc-btn.purple{background:#6a0dad;border-top-color:#9b30ff;border-left-color:#9b30ff;border-bottom-color:#3a006e;border-right-color:#3a006e}
+.mc-btn.purple:hover{background:#7d1fd0}
+
+/* ---- START SCREEN ---- */
+#start-screen{padding:2rem 1rem}
+#start-screen h1{font-size:2.1rem;color:var(--grass);text-shadow:3px 3px var(--gold),5px 5px #000;margin-bottom:.8rem;line-height:1.5}
+.subtitle{color:var(--gold);font-size:.72rem;margin-bottom:1.8rem;text-shadow:1px 1px #000}
+.mode-select{display:flex;justify-content:center;gap:1.5rem;margin:1.5rem 0;flex-wrap:wrap}
+.mode-card{background:#2d2416;border-top:4px solid #5a4020;border-left:4px solid #5a4020;border-bottom:4px solid #0d0a05;border-right:4px solid #0d0a05;padding:1.2rem 1.5rem;cursor:pointer;transition:all .15s;min-width:200px}
+.mode-card:hover{background:#3d3020;transform:translateY(-2px)}
+.mode-card .mode-icon{font-size:2rem;display:block;margin-bottom:.6rem}
+.mode-card .mode-title{font-size:.65rem;color:var(--gold);margin-bottom:.4rem}
+.mode-card .mode-desc{font-size:.44rem;color:#888;line-height:1.9}
+.level-preview{display:flex;justify-content:center;gap:.8rem;margin:1.4rem 0;flex-wrap:wrap}
+.lp-item{background:#2d2416;border-top:3px solid #5a4020;border-left:3px solid #5a4020;border-bottom:3px solid #0d0a05;border-right:3px solid #0d0a05;padding:.7rem .9rem;font-size:.55rem;color:#ccc;min-width:88px}
+.lp-item .icon{font-size:1.4rem;display:block;margin-bottom:.4rem}
+.lp-item .ltime{color:var(--gold);font-size:.5rem;margin-top:.3rem}
+
+/* ---- TYPING MODE ---- */
+#level-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;background:var(--wood);border-top:3px solid #5a4020;border-left:3px solid #5a4020;border-bottom:3px solid #0d0a05;border-right:3px solid #0d0a05;padding:.6rem 1rem}
+#level-label{font-size:.55rem;color:var(--diamond);text-shadow:0 0 8px var(--diamond)}
+#live-wpm,#timer-box{font-size:.6rem;color:var(--gold);transition:color .3s}
+#level-dots,#hunt-dots{display:flex;gap:10px;justify-content:center;margin-bottom:1rem;font-size:1.4rem}
+.dot{cursor:default;transition:transform .2s}
+.dot.current{transform:scale(1.35);filter:drop-shadow(0 0 6px var(--diamond))}
+.dot.done{filter:drop-shadow(0 0 4px #5d9e3f)}
+#words-container{background:#2a2a2a;border-top:4px solid #555;border-left:4px solid #555;border-bottom:4px solid #111;border-right:4px solid #111;padding:1.2rem;margin-bottom:1rem;min-height:120px;max-height:200px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start}
+.word-chip{font-family:"Press Start 2P",monospace;font-size:.62rem;padding:5px 9px;background:#3c3c3c;border-top:2px solid #666;border-left:2px solid #666;border-bottom:2px solid #1a1a1a;border-right:2px solid #1a1a1a;color:#ccc;letter-spacing:.06em;transition:all .15s;white-space:nowrap}
+.word-chip.typed{background:#1a3a1a;border-top-color:#4f4;border-left-color:#4f4;border-bottom-color:#0a1a0a;border-right-color:#0a1a0a;color:#5f5}
+.word-chip.current{background:#1c1a00;border-top-color:var(--gold);border-left-color:var(--gold);border-bottom-color:#5a4000;border-right-color:#5a4000;color:#fff;box-shadow:0 0 10px rgba(245,197,66,.53)}
+.word-chip.wrong{background:#3a0000;border-top-color:#f44;border-left-color:#f44;border-bottom-color:#600;border-right-color:#600;color:#faa;animation:shake .25s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.letter.correct{color:#5f5}.letter.wrong{color:#f44;background:#300;border-radius:1px}.letter.pending{color:#777}
+#input-wrap{margin-bottom:1rem}
+#typing-input{width:100%;padding:.8rem 1rem;font-family:"Press Start 2P",monospace;font-size:.85rem;background:#111;color:#e0e0e0;border-top:3px solid #222;border-left:3px solid #222;border-bottom:3px solid #666;border-right:3px solid #666;outline:none;letter-spacing:.06em;transition:border-color .2s,box-shadow .2s}
+#typing-input:focus{border-bottom-color:var(--gold);border-right-color:var(--gold);box-shadow:0 0 12px rgba(245,197,66,.27)}
+#typing-input.error{border-color:#f44;animation:shake .25s}
+#typing-input:disabled{opacity:.5}
+#stats-row{display:flex;justify-content:center;gap:1.5rem;font-size:.52rem;color:#888;flex-wrap:wrap;background:var(--wood);border-top:2px solid #5a4020;border-left:2px solid #5a4020;border-bottom:2px solid #0d0a05;border-right:2px solid #0d0a05;padding:.6rem}
+#stats-row span b{color:var(--diamond)}
+
+/* ---- WIN SCREEN ---- */
+#win-screen{padding:2rem 1rem}
+#win-screen h2{font-size:1.5rem;color:var(--gold);text-shadow:3px 3px var(--grass),5px 5px #000;margin-bottom:1.5rem;line-height:1.6}
+.fstat{background:#2d2416;border-top:3px solid #5a4020;border-left:3px solid #5a4020;border-bottom:3px solid #0d0a05;border-right:3px solid #0d0a05;padding:.8rem 1.5rem;margin:.5rem auto;max-width:400px;font-size:.65rem;color:var(--diamond)}
+
+/* ---- WORD HUNT ---- */
+#hunt-screen{padding:1rem}
+#hunt-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem;background:var(--wood);border-top:3px solid #9b30ff;border-left:3px solid #9b30ff;border-bottom:3px solid #3a006e;border-right:3px solid #3a006e;padding:.6rem 1rem}
+#hunt-level-label{font-size:.55rem;color:#c084fc;text-shadow:0 0 8px #9b30ff}
+#hunt-score-display{font-size:.6rem;color:var(--gold)}
+#hunt-progress{font-size:.55rem;color:#aaa}
+#hunt-layout{display:flex;gap:1.2rem;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+/* grid */
+#hunt-grid-container{position:relative;user-select:none;touch-action:none;}
+#hunt-grid{display:inline-grid;gap:2px;background:#0d0020;border:3px solid #9b30ff;padding:6px;box-shadow:0 0 24px rgba(155,48,255,.4);cursor:crosshair;}
+.gc{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:.58rem;background:#1e1a2e;border:1px solid #2a2040;color:#bbb;transition:background .1s,color .1s;text-transform:uppercase;font-weight:bold;}
+.gc.drag{background:#4a1a6a!important;color:#e0aaff!important;border-color:#9b30ff!important;}
+.gc.found-1{background:#1a4a1a;color:#5f5;border-color:#4f4;}
+.gc.found-2{background:#1a2a5a;color:#7af;border-color:#4af;}
+.gc.found-3{background:#5a1a1a;color:#f77;border-color:#f44;}
+.gc.found-4{background:#4a3a00;color:#fd4;border-color:#fc0;}
+.gc.found-5{background:#3a005a;color:#d88;border-color:#b06;}
+@keyframes pop{0%{transform:scale(1.4)}100%{transform:scale(1)}}
+.gc.popped{animation:pop .3s}
+/* sidebar */
+#hunt-sidebar{flex:0 0 190px;min-width:160px}
+#hunt-word-list{background:#0d0020;border:2px solid #9b30ff;padding:.8rem;border-radius:2px}
+#hunt-word-list h3{font-size:.5rem;color:#c084fc;margin-bottom:.7rem;text-align:center;letter-spacing:.05em}
+.hwi{font-size:.5rem;padding:5px 8px;color:#ccc;margin:3px 0;border-left:3px solid #444;text-transform:uppercase;letter-spacing:.05em;transition:all .2s}
+.hwi.found{color:#5f5;border-left-color:#4f4;text-decoration:line-through;opacity:.55}
+#hunt-drag-hint{font-size:.42rem;color:#666;margin-top:.7rem;text-align:center;line-height:2}
+#hint-btn{margin-top:.8rem;width:100%;font-size:.5rem;padding:.6rem}
+#hint-count{display:block;font-size:.42rem;color:#f5c542;margin-top:.4rem}
+.gc.hint-flash{animation:hintPulse 1s ease-in-out 3;background:#9b30ff!important;border-color:#c084fc!important}
+@keyframes hintPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(1.15)}}
+/* HUNT WIN */
+#hunt-win-screen{padding:2rem 1rem}
+#hunt-win-screen h2{font-size:1.4rem;color:#c084fc;text-shadow:3px 3px #3a006e,5px 5px #000;margin-bottom:1.5rem;line-height:1.6}
+
+/* ---- LEVEL SELECT ---- */
+#level-select-screen,#hunt-select-screen{padding:2rem 1rem}
+#level-select-screen h2,#hunt-select-screen h2{font-size:1.2rem;margin-bottom:.5rem;line-height:1.6}
+.select-subtitle{font-size:.48rem;color:#888;margin-bottom:1.8rem;line-height:2}
+.level-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:1rem;margin-bottom:2rem}
+.lvl-card{width:130px;padding:1rem .8rem;background:#2d2416;border-top:4px solid #5a4020;border-left:4px solid #5a4020;border-bottom:4px solid #0d0a05;border-right:4px solid #0d0a05;cursor:pointer;transition:all .15s;position:relative}
+.lvl-card:hover:not(.locked){background:#3d3020;transform:translateY(-3px)}
+.lvl-card.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+.lvl-card.cleared{border-top-color:#4f4;border-left-color:#4f4}
+.lvl-card .lc-icon{font-size:1.6rem;display:block;margin-bottom:.5rem}
+.lvl-card .lc-name{font-size:.45rem;color:#ccc;margin-bottom:.4rem;line-height:1.6}
+.lvl-card .lc-time{font-size:.42rem;color:var(--gold);margin-bottom:.3rem}
+.lvl-card .lc-status{font-size:.45rem;margin-top:.4rem}
+.lvl-card.locked .lc-status{color:#666}
+.lvl-card.cleared .lc-status{color:#5f5}
+.lvl-card.unlocked .lc-status{color:var(--diamond)}
+.lvl-card .lc-lock{position:absolute;top:6px;right:8px;font-size:.9rem}
+/* hunt card purple tint */
+.hunt-card{border-top-color:#9b30ff;border-left-color:#9b30ff}
+.hunt-card.cleared{border-top-color:#4f4;border-left-color:#4f4}
+.hunt-card:hover:not(.locked){background:#1e0a2e}
+/* ---- OVERLAY ---- */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:200}
+#overlay.hidden{display:none}
+#overlay-box{background:#1a0000;border-top:5px solid #600;border-left:5px solid #600;border-bottom:5px solid #300;border-right:5px solid #300;padding:2rem 2.5rem;text-align:center;max-width:460px;width:90%}
+#overlay-box.success{background:#001500;border-color:#060}
+#overlay-box.purple{background:#0d0020;border-color:#9b30ff}
+#overlay-title{font-size:1rem;margin-bottom:.8rem;color:#fff;line-height:1.5}
+#overlay-msg{color:#aaa;margin-bottom:1.5rem;line-height:2.2;font-size:.52rem;white-space:pre-line}
+#overlay-btns{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap}
+
+#grass-bar{position:fixed;bottom:0;left:0;right:0;height:32px;background:repeating-linear-gradient(90deg,#5d9e3f 0,#5d9e3f 32px,#4a8a2f 32px,#4a8a2f 64px);border-top:4px solid #7bc45a;z-index:0}
+#dirt-bar{position:fixed;bottom:0;left:0;right:0;height:24px;background:repeating-linear-gradient(90deg,#8B5E3C 0,#8B5E3C 32px,#7a4f2f 32px,#7a4f2f 64px);z-index:0}
+</style>
+</head>
+<body>
+<div class="pixel" style="background:#5d9e3f;left:8%;animation-duration:8s;bottom:-10px"></div>
+<div class="pixel" style="background:#f5c542;left:20%;animation-duration:12s;animation-delay:2s;bottom:-10px"></div>
+<div class="pixel" style="background:#4dd9e0;left:33%;animation-duration:9s;animation-delay:1s;bottom:-10px"></div>
+<div class="pixel" style="background:#9b30ff;left:63%;animation-duration:10s;animation-delay:5s;bottom:-10px"></div>
+<div class="pixel" style="background:#c084fc;left:85%;animation-duration:7s;animation-delay:4s;bottom:-10px"></div>
+<div id="dirt-bar"></div>
+<div id="grass-bar"></div>
+
+<div id="app">
+
+  <!-- START SCREEN -->
+  <div id="start-screen" class="screen active">
+    <h1>&#9935; TYPING CRAFT</h1>
+    <p class="subtitle">Choose your game mode!</p>
+    <div class="mode-select">
+      <div class="mode-card" onclick="openTypingSelect()">
+        <span class="mode-icon">&#9874;</span>
+        <div class="mode-title">TYPING MODE</div>
+        <div class="mode-desc">Type words to mine them<br>5 levels of challenge<br>ESC to pause</div>
+        <br>
+        <button class="mc-btn green" style="font-size:.6rem;margin-top:.5rem">&#9654; PLAY</button>
+      </div>
+      <div class="mode-card" onclick="openHuntSelect()">
+        <span class="mode-icon">&#128269;</span>
+        <div class="mode-title">WORD HUNT</div>
+        <div class="mode-desc">Drag to select hidden words<br>in the letter grid!<br>No time limit — find them all!</div>
+        <br>
+        <button class="mc-btn purple" style="font-size:.6rem;margin-top:.5rem">&#9654; PLAY</button>
+      </div>
+    </div>
+    <div class="level-preview">
+      <div class="lp-item"><span class="icon">&#129398;</span>Level 1<div class="ltime">7:00</div></div>
+      <div class="lp-item"><span class="icon">&#129695;</span>Level 2<div class="ltime">6:00</div></div>
+      <div class="lp-item"><span class="icon">&#128142;</span>Level 3<div class="ltime">6:00</div></div>
+      <div class="lp-item"><span class="icon">&#128293;</span>Level 4<div class="ltime">5:00</div></div>
+      <div class="lp-item"><span class="icon">&#9889;</span>Level 5<div class="ltime">5:00</div></div>
+    </div>
+  </div>
+
+  <!-- TYPING LEVEL SELECT -->
+  <div id="level-select-screen" class="screen">
+    <h2 style="color:var(--gold);text-shadow:2px 2px #000">&#9874; SELECT LEVEL</h2>
+    <p class="select-subtitle">Clear each level to unlock the next one!</p>
+    <div class="level-grid" id="typing-level-grid"></div>
+    <button class="mc-btn" onclick="showScreen('start-screen')" style="font-size:.65rem">&#8962; BACK</button>
+  </div>
+
+  <!-- HUNT LEVEL SELECT -->
+  <div id="hunt-select-screen" class="screen">
+    <h2 style="color:#c084fc;text-shadow:2px 2px #3a006e,3px 3px #000">&#128269; SELECT HUNT LEVEL</h2>
+    <p class="select-subtitle">Find all words to unlock the next hunt!</p>
+    <div class="level-grid" id="hunt-level-grid"></div>
+    <button class="mc-btn" onclick="showScreen('start-screen')" style="font-size:.65rem">&#8962; BACK</button>
+  </div>
+
+  <!-- TYPING GAME SCREEN -->
+  <div id="game-screen" class="screen">
+    <div id="level-bar">
+      <span id="level-label">Level 1</span>
+      <span id="live-wpm">WPM: --</span>
+      <span id="timer-box">&#9201; 07:00</span>
+    </div>
+    <div id="level-dots"></div>
+    <div id="words-container"></div>
+    <div id="input-wrap">
+      <input id="typing-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        placeholder="> start typing and press ENTER to mine..."
+        oninput="handleInput()" onkeydown="handleKeydown(event)">
+    </div>
+    <div id="stats-row">
+      <span>&#9874; Words: <b id="stat-words">0</b></span>
+      <span>&#10060; Errors: <b id="stat-errors">0</b></span>
+      <span>&#127919; Accuracy: <b id="stat-acc">100%</b></span>
+      <span>&#11088; Score: <b id="stat-score">0</b></span>
+    </div>
+  </div>
+
+  <!-- TYPING WIN SCREEN -->
+  <div id="win-screen" class="screen">
+    <h2>&#127942; YOU WIN!</h2>
+    <p style="font-size:.58rem;color:#aaa;margin-bottom:1.5rem;line-height:2">You mined all 5 levels! True Crafter!</p>
+    <div class="fstat" id="final-score"></div>
+    <div class="fstat" id="final-wpm"></div>
+    <div class="fstat" id="final-acc"></div>
+    <div class="fstat" id="final-errors"></div>
+    <div class="fstat" id="final-words"></div>
+    <br>
+    <button class="mc-btn green" onclick="openTypingSelect()" style="margin-top:1rem;font-size:.7rem">&#9654; PLAY AGAIN</button>
+    <button class="mc-btn" onclick="showScreen('start-screen')" style="font-size:.65rem">&#8962; MENU</button>
+  </div>
+
+  <!-- WORD HUNT SCREEN -->
+  <div id="hunt-screen" class="screen">
+    <div id="hunt-bar">
+      <span id="hunt-level-label">&#128269; Hunt Level 1</span>
+      <span id="hunt-progress">0 / 0</span>
+      <span id="hunt-score-display">&#11088; 0 pts</span>
+    </div>
+    <div id="hunt-dots"></div>
+    <div id="hunt-layout">
+      <div id="hunt-grid-container">
+        <div id="hunt-grid"></div>
+        <div id="hunt-drag-hint">&#128073; Click &amp; drag to select a word<br>Works on touch too!</div>
+      </div>
+      <div id="hunt-sidebar">
+        <div id="hunt-word-list">
+          <h3>&#128269; HIDDEN WORDS</h3>
+          <div id="hunt-words-ul"></div>
+        </div>
+        <button id="hint-btn" class="mc-btn purple" onclick="useHint()">💡 USE HINT<span id="hint-count">3 hints left</span></button>
+        <button class="mc-btn" onclick="exitHunt()" style="margin-top:.5rem;width:100%;font-size:.5rem">&#8962; EXIT</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUNT WIN SCREEN -->
+  <div id="hunt-win-screen" class="screen">
+    <h2>&#128269; HUNT COMPLETE!</h2>
+    <p style="font-size:.55rem;color:#c084fc;margin-bottom:1.5rem;line-height:2">You found all hidden words! Master Detective!</p>
+    <div class="fstat" id="hunt-final-score"></div>
+    <div class="fstat" id="hunt-final-found"></div>
+    <div class="fstat" id="hunt-final-time"></div>
+    <br>
+    <button class="mc-btn purple" onclick="openHuntSelect()" style="margin-top:1rem;font-size:.7rem">&#9654; PLAY AGAIN</button>
+    <button class="mc-btn" onclick="showScreen('start-screen')" style="font-size:.65rem">&#8962; MENU</button>
+  </div>
+</div>
+
+<!-- OVERLAY -->
+<div id="overlay" class="hidden">
+  <div id="overlay-box">
+    <div id="overlay-title"></div>
+    <div id="overlay-msg"></div>
+    <div id="overlay-btns"></div>
+  </div>
+</div>
+
+<script>
+/* ===================== UNLOCK / PROGRESS SAVE ===================== */
+const SAVE_KEY_TYPING="tc_typing_unlock";
+const SAVE_KEY_HUNT="tc_hunt_unlock";
+
+function getTypingUnlock(){return parseInt(localStorage.getItem(SAVE_KEY_TYPING)||"0");}
+function setTypingUnlock(n){localStorage.setItem(SAVE_KEY_TYPING,Math.max(getTypingUnlock(),n));}
+function getHuntUnlock(){return parseInt(localStorage.getItem(SAVE_KEY_HUNT)||"0");}
+function setHuntUnlock(n){localStorage.setItem(SAVE_KEY_HUNT,Math.max(getHuntUnlock(),n));}
+
+const TYPING_ICONS=["&#129398;","&#129695;","&#128142;","&#128293;","&#9889;"];
+const HUNT_ICONS=["&#128001;","&#127752;","&#127795;","&#128187;","&#127381;"];
+const LEVEL_TIMES=["7:00","6:00","6:00","5:00","5:00"];
+
+function openTypingSelect(){
+  const unlocked=5; // ปลดล็อกทุกด่าน
+  const grid=document.getElementById("typing-level-grid");
+  grid.innerHTML="";
+  LEVELS.forEach((lvl,i)=>{
+    const cleared=i<getTypingUnlock();
+    const isUnlocked=true; // เปิดทุกด่าน
+    const card=document.createElement("div");
+    card.className="lvl-card"+(cleared?" cleared":" unlocked");
+    card.innerHTML=`
+      <span class="lc-icon">${TYPING_ICONS[i]}</span>
+      <div class="lc-name">${lvl.name.replace("Level "+(i+1)+" - ","")}</div>
+      <div class="lc-time">&#9201; ${LEVEL_TIMES[i]}</div>
+      <div class="lc-status">${cleared?"✅ CLEARED":"▶ PLAY"}</div>
+    `;
+    card.onclick=()=>{
+      totalErrors=0;totalKeystrokes=0;totalScore=0;
+      currentLevel=i;gameStartTime=Date.now();
+      showScreen("game-screen");loadLevel(i);
+    };
+    grid.appendChild(card);
+  });
+  showScreen("level-select-screen");
+}
+
+function openHuntSelect(){
+  const unlocked=5; // ปลดล็อกทุกด่าน
+  const grid=document.getElementById("hunt-level-grid");
+  grid.innerHTML="";
+  HUNT_LEVELS.forEach((lvl,i)=>{
+    const cleared=i<getHuntUnlock();
+    const isUnlocked=true; // เปิดทุกด่าน
+    const card=document.createElement("div");
+    card.className="lvl-card hunt-card"+(cleared?" cleared":" unlocked");
+    card.innerHTML=`
+      <span class="lc-icon">${HUNT_ICONS[i]}</span>
+      <div class="lc-name">${lvl.name.replace("Hunt "+(i+1)+" - ","")}</div>
+      <div class="lc-time">${lvl.words.length} words</div>
+      <div class="lc-status">${cleared?"✅ CLEARED":"▶ PLAY"}</div>
+    `;
+    card.onclick=()=>{
+      huntLevel=i;huntTotalScore=0;huntTotalFound=0;huntGameStart=Date.now();
+      showScreen("hunt-screen");loadHuntLevel(i);
+    };
+    grid.appendChild(card);
+  });
+  showScreen("hunt-select-screen");
+}
+
+/* ===================== TYPING MODE ===================== */
+const LEVELS=[
+  {name:"Level 1 - Topics",timeLimit:420,words:["household pets","school uniforms","fast food","video game","makeup"]},
+  {name:"Level 2 - Issues",timeLimit:360,words:["celebrity news","climate change","vegetarianism","shaking hands"]},
+  {name:"Level 3 - Etiquette",timeLimit:360,words:["using titles","bowing","tipping","using chopstick","removing shoes","giving gifts"]},
+  {name:"Level 4 - Careers",timeLimit:300,words:["graphic artist","hairdresser","photographer","police officer","cashier"]},
+  {name:"Level 5 - Activities",timeLimit:300,words:["train for a race","daydream","do volunteer work","learn how to draw","take a cooking course"]}
+];
+let currentLevel=0,words=[],wordIndex=0,totalErrors=0,totalKeystrokes=0,levelErrors=0,
+    totalScore=0,levelScore=0,gameStartTime=null,startTime=null,
+    pausedTime=0,pausedAt=null,timerInterval=null,wpmInterval=null,
+    gameActive=false,paused=false,hintsRemaining=3;
+
+function startGame(){
+  currentLevel=0;totalErrors=0;totalKeystrokes=0;totalScore=0;
+  gameStartTime=Date.now();showScreen("game-screen");loadLevel(0);
+}function loadLevel(idx){
+  const lvl=LEVELS[idx];words=lvl.words.slice();wordIndex=0;levelErrors=0;levelScore=0;gameActive=true;
+  document.getElementById("level-label").textContent=lvl.name;
+  document.getElementById("stat-errors").textContent="0";
+  document.getElementById("stat-words").textContent="0";
+  document.getElementById("stat-acc").textContent="100%";
+  document.getElementById("stat-score").textContent=totalScore;
+  document.getElementById("live-wpm").textContent="WPM: --";
+  buildDots(idx);renderWords();clearTimers();
+  startTime=Date.now();pausedTime=0;pausedAt=null;paused=false;
+  timerInterval=setInterval(()=>{
+    if(paused)return;
+    const elapsed=Math.floor((Date.now()-startTime)/1000)-pausedTime;
+    const rem=lvl.timeLimit-elapsed;
+    if(rem<=0){clearTimers();gameOver("Time is up!");return;}
+    const tb=document.getElementById("timer-box");
+    tb.textContent="\u23F1 "+String(Math.floor(rem/60)).padStart(2,"0")+":"+String(rem%60).padStart(2,"0");
+    tb.style.color=rem<=30?"#ff4444":"#f5c542";
+  },200);
+  wpmInterval=setInterval(()=>{
+    if(!startTime||!gameActive||paused)return;
+    const m=(Date.now()-startTime-pausedTime*1000)/60000;
+    document.getElementById("live-wpm").textContent="WPM: "+(m>0?Math.round(wordIndex/m):0);
+  },1000);
+  const inp=document.getElementById("typing-input");inp.value="";inp.disabled=false;inp.focus();
+}
+function renderWords(){
+  const c=document.getElementById("words-container");c.innerHTML="";
+  words.forEach((w,i)=>{
+    const d=document.createElement("div");
+    d.className="word-chip"+(i===wordIndex?" current":i<wordIndex?" typed":"");
+    d.id="word-"+i;
+    if(i===wordIndex)d.innerHTML=w.split("").map((ch,ci)=>`<span class="letter pending" id="l-${ci}">${ch}</span>`).join("");
+    else d.textContent=w;
+    c.appendChild(d);
+  });
+  document.getElementById("word-"+wordIndex)?.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function handleInput(){
+  if(!gameActive)return;
+  const inp=document.getElementById("typing-input");
+  const typed=inp.value,target=words[wordIndex];
+  totalKeystrokes++;
+  document.getElementById("stat-acc").textContent=calcAcc()+"%";
+  for(let i=0;i<target.length;i++){
+    const el=document.getElementById("l-"+i);if(!el)continue;
+    el.className="letter "+(i<typed.length?(typed[i]===target[i]?"correct":"wrong"):"pending");
+  }
+}
+function calcAcc(){return(wordIndex+totalErrors)===0?100:Math.round((wordIndex/(wordIndex+totalErrors))*100);}
+function handleKeydown(e){
+  if(e.key==="Escape"){e.preventDefault();togglePause();return;}
+  if(!gameActive||paused)return;
+  if(e.key==="Enter"){e.preventDefault();submitWord();}
+}
+function togglePause(){
+  if(!gameActive)return;
+  paused=!paused;
+  const inp=document.getElementById("typing-input");
+  if(paused){
+    pausedAt=Date.now();inp.disabled=true;
+    showOverlay("\u23F8 PAUSED","Game paused\nPress ESC to continue",[{label:"\u25B6 Resume",action:togglePause}]);
+  }else{
+    if(pausedAt){pausedTime+=Math.floor((Date.now()-pausedAt)/1000);pausedAt=null;}
+    hideOverlay();inp.disabled=false;inp.focus();
+  }
+}
+function submitWord(){
+  const inp=document.getElementById("typing-input");
+  const typed=inp.value.trim(),target=words[wordIndex];
+  if(!typed)return;
+  if(typed===target){
+    document.getElementById("word-"+wordIndex).className="word-chip typed";
+    document.getElementById("word-"+wordIndex).textContent=target;
+    wordIndex++;inp.value="";inp.classList.remove("error");
+    const pts=target.length*10;levelScore+=pts;totalScore+=pts;
+    document.getElementById("stat-score").textContent=totalScore;
+    document.getElementById("stat-words").textContent=wordIndex;
+    document.getElementById("stat-acc").textContent=calcAcc()+"%";
+    if(wordIndex>=words.length){levelComplete();return;}
+    renderWords();
+  }else{
+    document.getElementById("word-"+wordIndex).className="word-chip wrong";
+    levelErrors++;totalErrors++;
+    document.getElementById("stat-errors").textContent=levelErrors;
+    document.getElementById("stat-acc").textContent=calcAcc()+"%";
+    inp.classList.add("error");setTimeout(()=>inp.classList.remove("error"),300);
+    inp.value="";renderWords();
+  }
+}
+function buildDots(current){
+  const wrap=document.getElementById("level-dots");wrap.innerHTML="";
+  LEVELS.forEach((_,i)=>{
+    const d=document.createElement("span");
+    d.className="dot"+(i<current?" done":i===current?" current":"");
+    d.textContent=i<current?"\u2705":i===current?"\uD83D\uDC8E":"\uD83E\uDEA8";
+    wrap.appendChild(d);
+  });
+}
+function levelComplete(){
+  clearTimers();gameActive=false;
+  setTypingUnlock(currentLevel+1);
+  const elapsed=((Date.now()-startTime-pausedTime*1000)/1000).toFixed(1);
+  const wpm=Math.round(words.length/((Date.now()-startTime-pausedTime*1000)/60000));
+  const acc=Math.round((words.length/(words.length+levelErrors))*100);
+  const isLast=currentLevel===LEVELS.length-1;
+  document.getElementById("overlay-box").className="success";
+  showOverlay(
+    isLast?"\uD83D\uDC8E LAST LEVEL CLEAR!":"\u2705 LEVEL "+(currentLevel+1)+" CLEAR!",
+    "Time: "+elapsed+"s\nWPM: "+wpm+"\nAccuracy: "+acc+"%\n\u2B50 +"+levelScore+" pts (Total: "+totalScore+")",
+    isLast?[{label:"\uD83C\uDFC6 See Results",action:showWinScreen},{label:"\uD83C\uDFAE Level Select",action:()=>{hideOverlay();openTypingSelect();}}]
+          :[{label:"\u25B6 Next Level",action:nextLevel},{label:"\u21BA Retry",action:()=>{hideOverlay();loadLevel(currentLevel);}},{label:"\uD83C\uDFAE Levels",action:()=>{hideOverlay();openTypingSelect();}}]
+  );
+}
+function nextLevel(){hideOverlay();currentLevel++;loadLevel(currentLevel);}
+function gameOver(reason){
+  gameActive=false;clearTimers();
+  document.getElementById("typing-input").disabled=true;
+  document.getElementById("overlay-box").className="";
+  showOverlay("\uD83D\uDC80 YOU DIED",reason+"\n\nLevel "+(currentLevel+1)+" - "+LEVELS[currentLevel].name,
+    [{label:"\u21BA Retry",action:()=>{hideOverlay();loadLevel(currentLevel);}},
+     {label:"\uD83C\uDFAE Levels",action:()=>{hideOverlay();openTypingSelect();}},
+     {label:"\u8962 Menu",action:()=>{hideOverlay();showScreen("start-screen");}}]);
+}
+function showWinScreen(){
+  hideOverlay();clearTimers();
+  const tw=LEVELS.reduce((s,l)=>s+l.words.length,0);
+  const acc=Math.round((tw/(tw+totalErrors))*100);
+  const totalMs=Date.now()-gameStartTime;
+  const totalWpm=Math.round(tw/(totalMs/60000));
+  document.getElementById("final-score").textContent="\u2B50 Total Score: "+totalScore+" pts";
+  document.getElementById("final-wpm").textContent="\u26A1 Overall WPM: "+totalWpm;
+  document.getElementById("final-acc").textContent="\uD83C\uDFAF Overall Accuracy: "+acc+"%";
+  document.getElementById("final-errors").textContent="\u274C Total Errors: "+totalErrors;
+  document.getElementById("final-words").textContent="\u26CF Words Mined: "+tw;
+  showScreen("win-screen");
+}
+
+/* ===================== WORD HUNT MODE ===================== */
+const HUNT_LEVELS=[
+  {name:"Hunt 1 - Animals", size:10, words:["CAT","DOG","FOX","OWL","BEE","ANT","COW","PIG","RAT","HEN"]},
+  {name:"Hunt 2 - Colors",  size:11, words:["RED","BLUE","PINK","GOLD","CYAN","LIME","GRAY","TEAL","ROSE","NAVY"]},
+  {name:"Hunt 3 - Nature",  size:12, words:["TREE","ROCK","LAKE","WIND","RAIN","SNOW","LEAF","SAND","MOON","STAR"]},
+  {name:"Hunt 4 - Tech",    size:13, words:["CODE","DATA","FILE","LOOP","NODE","BYTE","CHIP","DISK","PORT","SYNC","JAVA","LINK"]},
+  {name:"Hunt 5 - Mixed",   size:14, words:["BRAVE","CRAFT","DANCE","EAGLE","FLAME","GRAPE","HONEY","INDEX","JOLLY","KNIFE","LEMON","MAGIC"]}
+];
+const FOUND_COLORS=["found-1","found-2","found-3","found-4","found-5"];
+
+let huntLevel=0,huntGridData=null,huntSize=0,huntWords=[],huntFound=[],
+    huntTotalScore=0,huntLevelScore=0,huntTotalFound=0,huntGameStart=null,
+    huntLevelStart=null,huntGameActive=false,huntColorIdx=0,huntHintsRemaining=3;huntLevelScore=0,huntTotalFound=0,huntGameStart=null,
+    huntLevelStart=null,huntGameActive=false,huntColorIdx=0;
+
+/* drag state */
+let isDragging=false,dragCells=[],dragStart=null;
+
+function startHunt(){
+  huntLevel=0;huntTotalScore=0;huntTotalFound=0;huntGameStart=Date.now();
+  showScreen("hunt-screen");loadHuntLevel(0);
+}
+function loadHuntLevel(idx){
+  const lvl=HUNT_LEVELS[idx];
+  huntSize=lvl.size;huntWords=lvl.words.slice();
+  huntFound=new Array(huntWords.length).fill(false);
+  huntLevelScore=0;huntGameActive=true;huntColorIdx=0;huntHintsRemaining=3;
+  huntLevelStart=Date.now();
+  document.getElementById("hunt-level-label").textContent="\uD83D\uDD0D "+lvl.name;
+  document.getElementById("hunt-score-display").textContent="\u2B50 "+huntTotalScore+" pts";
+  document.getElementById("hunt-progress").textContent="0 / "+huntWords.length;
+  document.getElementById("hint-count").textContent=huntHintsRemaining+" hints left";
+  document.getElementById("hint-btn").disabled=false;
+  buildHuntDots(idx);
+  huntGridData=generateGrid(huntSize,huntWords);
+  renderHuntGrid();
+  renderHuntWordList();
+  document.getElementById("hunt-input")&&(document.getElementById("hunt-input").value="");
+}
+function buildHuntDots(current){
+  const wrap=document.getElementById("hunt-dots");wrap.innerHTML="";
+  HUNT_LEVELS.forEach((_,i)=>{
+    const d=document.createElement("span");
+    d.className="dot"+(i<current?" done":i===current?" current":"");
+    d.textContent=i<current?"\u2705":i===current?"\uD83D\uDD0D":"\uD83E\uDEA8";
+    wrap.appendChild(d);
+  });
+}
+
+/* ---- grid generation ---- */
+function generateGrid(size,words){
+  const grid=Array.from({length:size},()=>Array(size).fill(null));
+  const placed=[];
+  const dirs=[[0,1],[1,0],[0,-1],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]];
+  for(const word of words){
+    let ok=false;
+    for(let t=0;t<400&&!ok;t++){
+      const dir=dirs[Math.floor(Math.random()*dirs.length)];
+      const r=Math.floor(Math.random()*size),c=Math.floor(Math.random()*size);
+      const er=r+dir[0]*(word.length-1),ec=c+dir[1]*(word.length-1);
+      if(er<0||er>=size||ec<0||ec>=size)continue;
+      let fits=true;
+      for(let i=0;i<word.length;i++){
+        const gr=r+dir[0]*i,gc2=c+dir[1]*i;
+        if(grid[gr][gc2]!==null&&grid[gr][gc2]!==word[i]){fits=false;break;}
+      }
+      if(!fits)continue;
+      const cells=[];
+      for(let i=0;i<word.length;i++){grid[r+dir[0]*i][c+dir[1]*i]=word[i];cells.push([r+dir[0]*i,c+dir[1]*i]);}
+      placed.push({word,cells});ok=true;
+    }
+  }
+  const alpha="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for(let r=0;r<size;r++)for(let c=0;c<size;c++)if(!grid[r][c])grid[r][c]=alpha[Math.floor(Math.random()*26)];
+  return{cells:grid,placed};
+}
+
+/* ---- render grid ---- */
+function renderHuntGrid(){
+  const g=document.getElementById("hunt-grid");
+  g.style.gridTemplateColumns=`repeat(${huntSize},32px)`;
+  g.innerHTML="";
+  for(let r=0;r<huntSize;r++){
+    for(let c=0;c<huntSize;c++){
+      const el=document.createElement("div");
+      el.className="gc";el.textContent=huntGridData.cells[r][c];
+      el.dataset.r=r;el.dataset.c=c;el.id=`gc-${r}-${c}`;
+      /* mouse events */
+      el.addEventListener("mousedown",onCellDown);
+      el.addEventListener("mouseenter",onCellEnter);
+      g.appendChild(el);
+    }
+  }
+  /* global mouseup */
+  document.addEventListener("mouseup",onDragEnd,{once:false});
+  /* touch */
+  g.addEventListener("touchstart",onTouchStart,{passive:false});
+  g.addEventListener("touchmove",onTouchMove,{passive:false});
+  g.addEventListener("touchend",onTouchEnd);
+}
+
+/* ---- drag (mouse) ---- */
+function onCellDown(e){
+  if(!huntGameActive)return;
+  e.preventDefault();
+  isDragging=true;
+  dragCells=[];
+  dragStart={r:+e.currentTarget.dataset.r,c:+e.currentTarget.dataset.c};
+  highlightLine(dragStart.r,dragStart.c,dragStart.r,dragStart.c);
+}
+function onCellEnter(e){
+  if(!isDragging||!huntGameActive)return;
+  const r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+  highlightLine(dragStart.r,dragStart.c,r,c);
+}
+function onDragEnd(){
+  if(!isDragging)return;
+  isDragging=false;
+  checkDragWord();
+  clearDragHighlight();
+  dragCells=[];dragStart=null;
+}
+
+/* ---- touch ---- */
+function onTouchStart(e){
+  if(!huntGameActive)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(!el||!el.classList.contains("gc"))return;
+  isDragging=true;dragCells=[];
+  dragStart={r:+el.dataset.r,c:+el.dataset.c};
+  highlightLine(dragStart.r,dragStart.c,dragStart.r,dragStart.c);
+}
+function onTouchMove(e){
+  if(!isDragging||!huntGameActive)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(!el||!el.classList.contains("gc"))return;
+  highlightLine(dragStart.r,dragStart.c,+el.dataset.r,+el.dataset.c);
+}
+function onTouchEnd(){
+  if(!isDragging)return;
+  isDragging=false;
+  checkDragWord();
+  clearDragHighlight();
+  dragCells=[];dragStart=null;
+}
+
+/* ---- line snapping: only straight/diagonal ---- */
+function highlightLine(r1,c1,r2,c2){
+  clearDragHighlight();
+  dragCells=[];
+  const dr=r2-r1,dc=c2-c1;
+  let stepR=0,stepC=0,len=0;
+  if(dr===0&&dc===0){len=1;stepR=0;stepC=0;}
+  else if(dr===0){len=Math.abs(dc)+1;stepR=0;stepC=Math.sign(dc);}
+  else if(dc===0){len=Math.abs(dr)+1;stepR=Math.sign(dr);stepC=0;}
+  else if(Math.abs(dr)===Math.abs(dc)){len=Math.abs(dr)+1;stepR=Math.sign(dr);stepC=Math.sign(dc);}
+  else{
+    /* snap to nearest axis */
+    if(Math.abs(dr)>Math.abs(dc)){len=Math.abs(dr)+1;stepR=Math.sign(dr);stepC=0;}
+    else{len=Math.abs(dc)+1;stepR=0;stepC=Math.sign(dc);}
+  }
+  for(let i=0;i<len;i++){
+    const r=r1+stepR*i,c=c1+stepC*i;
+    dragCells.push([r,c]);
+    const el=document.getElementById(`gc-${r}-${c}`);
+    if(el&&!el.classList.toString().includes("found"))el.classList.add("drag");
+  }
+}
+function clearDragHighlight(){
+  document.querySelectorAll(".gc.drag").forEach(el=>el.classList.remove("drag"));
+}
+
+/* ---- check word ---- */
+function checkDragWord(){
+  if(!dragCells.length)return;
+  const typed=dragCells.map(([r,c])=>huntGridData.cells[r][c]).join("");
+  const typedRev=typed.split("").reverse().join("");
+  let matchIdx=-1;
+  huntWords.forEach((w,i)=>{
+    if(!huntFound[i]&&(w===typed||w===typedRev))matchIdx=i;
+  });
+  if(matchIdx!==-1){
+    /* correct! */
+    const colorClass=FOUND_COLORS[huntColorIdx%FOUND_COLORS.length];huntColorIdx++;
+    huntFound[matchIdx]=true;
+    const pts=huntWords[matchIdx].length*15;huntLevelScore+=pts;huntTotalScore+=pts;huntTotalFound++;
+    document.getElementById("hunt-score-display").textContent="\u2B50 "+huntTotalScore+" pts";
+    const foundCount=huntFound.filter(Boolean).length;
+    document.getElementById("hunt-progress").textContent=foundCount+" / "+huntWords.length;
+    /* color cells */
+    dragCells.forEach(([r,c])=>{
+      const el=document.getElementById(`gc-${r}-${c}`);
+      if(el){el.className="gc "+colorClass;el.classList.add("popped");setTimeout(()=>el.classList.remove("popped"),300);}
+    });
+    /* word list */
+    document.getElementById("hwi-"+matchIdx).className="hwi found";
+    if(huntFound.every(Boolean))setTimeout(huntLevelComplete,400);
+  }
+  /* wrong: do nothing, cells reset via clearDragHighlight */
+}
+
+function renderHuntWordList(){
+  const ul=document.getElementById("hunt-words-ul");ul.innerHTML="";
+  huntWords.forEach((w,i)=>{
+    const li=document.createElement("div");
+    li.className="hwi"+(huntFound[i]?" found":"");
+    li.id="hwi-"+i;li.textContent=w;ul.appendChild(li);
+  });
+}
+
+function useHint(){
+  if(!huntGameActive||huntHintsRemaining<=0)return;
+  
+  /* หาคำที่ยังไม่พบ */
+  const unfoundIdx=huntFound.findIndex(f=>!f);
+  if(unfoundIdx===-1)return;
+  
+  huntHintsRemaining--;
+  document.getElementById("hint-count").textContent=huntHintsRemaining+" hints left";
+  if(huntHintsRemaining===0){
+    document.getElementById("hint-btn").disabled=true;
+    document.getElementById("hint-btn").style.opacity="0.5";
+  }
+  
+  /* หาตำแหน่งของคำนั้นในกริด */
+  const wordData=huntGridData.placed.find(p=>p.word===huntWords[unfoundIdx]);
+  if(!wordData)return;
+  
+  /* เน้นเซลล์ที่เป็นคำนั้น */
+  wordData.cells.forEach(([r,c])=>{
+    const el=document.getElementById(`gc-${r}-${c}`);
+    if(el&&!el.classList.toString().includes("found")){
+      el.classList.add("hint-flash");
+      setTimeout(()=>el.classList.remove("hint-flash"),3000);
+    }
+  });
+  
+  /* แสดงข้อความชั่วคราว */
+  const hintMsg=document.getElementById("hunt-drag-hint");
+  const oldText=hintMsg.innerHTML;
+  hintMsg.innerHTML=`<span style="color:#f5c542">💡 Hint: Look for "${huntWords[unfoundIdx]}"!</span>`;
+  setTimeout(()=>hintMsg.innerHTML=oldText,3000);
+}
+
+function huntLevelComplete(){
+  huntGameActive=false;
+  setHuntUnlock(huntLevel+1);
+  const elapsed=((Date.now()-huntLevelStart)/1000).toFixed(1);
+  const isLast=huntLevel===HUNT_LEVELS.length-1;
+  document.getElementById("overlay-box").className="purple";
+  showOverlay(
+    isLast?"\uD83D\uDD0D ALL HUNTS CLEAR!":"\u2705 HUNT "+(huntLevel+1)+" CLEAR!",
+    "Found all "+huntWords.length+" words!\nTime: "+elapsed+"s\n\u2B50 +"+huntLevelScore+" pts (Total: "+huntTotalScore+")",
+    isLast?[{label:"\uD83C\uDFC6 See Results",action:showHuntWinScreen},{label:"\uD83C\uDFAE Levels",action:()=>{hideOverlay();openHuntSelect();}}]
+          :[{label:"\u25B6 Next Level",action:nextHuntLevel},{label:"\u21BA Retry",action:()=>{hideOverlay();loadHuntLevel(huntLevel);}},{label:"\uD83C\uDFAE Levels",action:()=>{hideOverlay();openHuntSelect();}}]
+  );
+}
+function nextHuntLevel(){hideOverlay();huntLevel++;loadHuntLevel(huntLevel);}
+function showHuntWinScreen(){
+  hideOverlay();
+  const totalMs=Date.now()-huntGameStart;
+  const m=Math.floor(totalMs/60000),s=Math.floor((totalMs%60000)/1000);
+  document.getElementById("hunt-final-score").textContent="\u2B50 Total Score: "+huntTotalScore+" pts";
+  document.getElementById("hunt-final-found").textContent="\uD83D\uDD0D Words Found: "+huntTotalFound;
+  document.getElementById("hunt-final-time").textContent="\u23F1 Total Time: "+m+"m "+s+"s";
+  showScreen("hunt-win-screen");
+}
+
+function exitHunt(){
+  if(!huntGameActive)return;
+  huntGameActive=false;
+  document.getElementById("overlay-box").className="purple";
+  showOverlay(
+    "⚠️ EXIT HUNT?",
+    "Are you sure you want to exit?\nYour progress will not be saved.",
+    [
+      {label:"❌ Cancel",action:()=>{huntGameActive=true;hideOverlay();}},
+      {label:"✓ Exit",action:()=>{hideOverlay();openHuntSelect();}}
+    ]
+  );
+}
+
+/* ===================== SHARED ===================== */
+function showOverlay(title,msg,buttons){
+  document.getElementById("overlay-title").textContent=title;
+  document.getElementById("overlay-msg").textContent=msg;
+  const btns=document.getElementById("overlay-btns");btns.innerHTML="";
+  buttons.forEach(b=>{const el=document.createElement("button");el.className="mc-btn";el.textContent=b.label;el.onclick=b.action;btns.appendChild(el);});
+  document.getElementById("overlay").classList.remove("hidden");
+}
+function hideOverlay(){document.getElementById("overlay").classList.add("hidden");}
+function showScreen(id){document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));document.getElementById(id).classList.add("active");}
+function clearTimers(){clearInterval(timerInterval);clearInterval(wpmInterval);timerInterval=null;wpmInterval=null;}
+</script>
+</body>
+</html>
